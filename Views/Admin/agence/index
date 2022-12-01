@@ -1,0 +1,146 @@
+<?php
+
+/**
+ * class PointVente
+ * 
+ * use to show the PointVente page
+ */
+class PointVenteController {
+
+    public function store($params) {
+
+        if(isset($params)) extract($params);
+        // echo'<pre>';print_r($params);exit;
+        $date = $values['date'];
+        $date_precendent = date('y-m-d', strtotime($date) -86400);
+        //On vérifie si la date précédent existe dans la database
+        $exit_precedent = (new PointVente())->findJourPrecendent($date_precendent);
+        //on considère le dernier ajout comme la date précédente
+        $last_add = (new PointVente())->findPrecedent($values['idAgence']);
+        $montantRestant =( ($last_add->getMontantRestant() + $values['montantComplement']) - $values['montantVendu']);
+        $values['montantRestant'] = $montantRestant;
+
+        $montantVerse = ($values['montantVendu'] - $values['depenses']);
+        $values['montantVerse'] = $montantVerse;
+
+        $sommeDesVentes = ($last_add->getSommeVentes() + $values['montantVendu']);
+        $values['sommeVentes']  = $sommeDesVentes;
+        // echo'<pre>';print_r($values);exit;
+
+        $manager = new PointVente();
+        $manager->save($values);
+        // exit;
+        $view = new View();
+        $view->redirect('home.html');  
+        
+    }
+
+    public function update($params) {
+
+        if(isset($params)) extract($params);
+        // echo'<pre>';print_r($params);exit;
+
+        if((isset($values['id'])) && (isset($values['montantComplement'])) && (isset($values['montantVendu'])) && (isset($values['depenses'])))
+        {
+            if( ($values['montantVendu'] >=0) && ($values['montantComplement']>=0) && ($values['montantRetire']>=0) && ($values['depenses']>=0) )
+            {
+                //on considère le dernier ajout comme la date précédente
+                $exist_pointVente = (new PointVente())->find($values['id']);
+                
+                if($exist_pointVente)
+                {
+                    $values['idAgence'] = $exist_pointVente->getIdAgence();
+                    $values['date'] = $exist_pointVente->getDate();
+
+                    $date = $exist_pointVente->getDate();
+
+                    $date_precendent = date('y-m-d', strtotime($date) -86400);
+                    //On vérifie si la date précédent existe dans la database
+                    $exit_precedent = (new PointVente())->findJourPrecendent($date_precendent);
+    
+                    $date = strtotime($date);
+                    // $date = date('l',$date);
+                    // echo $date;exit;
+                    //Afficher la date en francais
+                    setlocale(LC_TIME, ['fr', 'fra', 'fr_FR']);
+                    $jour = strftime('%A', $date);
+
+                    if($jour == "lundi"){
+
+                        $montantRestant =( (0 + $values['montantComplement']) - $values['montantVendu']);
+                        $values['montantRestant'] = $montantRestant;
+            
+                        $montantVerse = ($values['montantVendu'] - $values['depenses']);
+                        $values['montantVerse'] = $montantVerse;
+            
+                        $sommeDesVentes = ($last_add->getSommeVentes() + $values['montantVendu']);
+                        $values['sommeVentes']  = $sommeDesVentes;
+
+                        $manager = new PointVente();
+                        $manager->save($values);
+
+                    }elseif($jour == "mardi" || $jour=="mercredi" || $jour =="jeudi" || $jour =="vendredi" || $jour=="samedi")
+                    {
+                        // Alors on récupère le jour précédent
+                        $last_add = (new PointVente())->findModifPrecedent($values['idAgence']);
+                        // echo '<pre>';print_r($last_add);exit;
+
+                        if(!empty($last_add)){
+
+                            $montantRestant =( ($last_add->getMontantRestant() + $values['montantComplement']) - $values['montantVendu']);
+                            $values['montantRestant'] = $montantRestant;
+                
+                            $montantVerse = ($values['montantVendu'] - $values['depenses']);
+                            $values['montantVerse'] = $montantVerse;
+                
+                            $sommeDesVentes = ($last_add->getSommeVentes() + $values['montantVendu']);
+                            $values['sommeVentes']  = $sommeDesVentes;
+                            // echo'<pre>';print_r($values);exit;
+                            
+                            $manager = new PointVente();
+                            $manager->save($values);
+
+                        }else{
+
+                        }
+                
+
+                    }
+                }else{
+
+                    $_SESSION["alert"]="error";
+                    $_SESSION["alert_message"]="Ce point de vente est introuvable !";
+                }       
+            }else{
+            
+                $_SESSION["alert"]="error";
+                $_SESSION["alert_message"]="Certains montants sont négatifs !";
+            }  
+                 
+        }else {
+
+             $_SESSION["alert"]="error";
+            $_SESSION["alert_message"]="Ce point de vente est introuvable !";
+        }
+        // exit;
+        $view = new View();
+        $view->redirect('agence.html/id/'.$values['idAgence']);  
+        
+    }
+
+    public function destroy($params) {
+
+        extract($params);
+        // print_r($params);exit;
+        $point_vente = (new PointVente())->find($id);
+        $manager = new PointVente();
+        $manager->delete($id);
+
+        $view = new View();
+        $view->redirect('agence.html/id/'.$point_vente->getIdAgence);
+
+    }
+
+   
+    
+}
